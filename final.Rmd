@@ -17,3 +17,40 @@ knitr::opts_chunk$set(
 
 ## Overview:
 
+Establish if there is a causal effect of smoking during pregnancy on the risk of the child being born with low birth weight (below 2500 grams) by analysing the data using logistic regression, including the right covariates in the model to be able to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight of the child.
+
+
+```{r}
+library(dagitty)
+library(ggdag)
+library(dplyr)
+
+# Load and preprocess the data
+birthweight_data <- read.csv("birthweight_analysisdata.csv")
+birthweight_data_reduced <- birthweight_data %>% drop_na()
+head(birthweight_data_reduced)
+
+# Define the unique node names for the DAG
+nodes <- c("smoke", "low", "age", "high_bp", "preterm", "neocare")  # Node names
+custom_labels <- c("Smoking", "Low BirthWeight", "Age", "High BP", "Preterm", "Neocare")  # Custom labels
+
+# Create a valid DAG string
+dag_string <- "dag { smoke -> low; age -> low; high_bp -> low; preterm -> low; smoke -> preterm; high_bp -> neocare }"
+
+# Generate the DAG
+dag <- dagitty(dag_string)
+
+# Define a mapping for custom node labels
+node_labels <- data.frame(
+  node = nodes,
+  label = custom_labels
+)
+
+# Plot the DAG with custom labels
+ggdag(dag) +
+  geom_dag_node(aes(fill = name), shape = 21, size = 10) +  # Customize node shape and size
+  geom_dag_text(aes(label = label), data = node_labels, size = 6, color = "black") +  # Add custom labels
+  scale_fill_manual(values = c("red", "blue", "green", "yellow", "purple", "orange")) +  # Custom colors
+  theme_dag() +
+  ggtitle("Customized DAG")
+```
