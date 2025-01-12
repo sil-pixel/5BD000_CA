@@ -2,7 +2,11 @@
 title: "Assignment 3"
 author: "Silpa Soni Nallacheruvu (19980824-5287)"
 date: "`r Sys.Date()`"
-output: pdf_document
+output: 
+  pdf_document:
+    citation_package: biblatex
+bibliography: references.bib
+link-citations: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -11,46 +15,324 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
+library(tableone)
+library(knitr)
+library(dagitty)
+library(ggdag)
+library(dplyr)
+library(ggplot2)
 ```
 
----
+------------------------------------------------------------------------
 
 ## Overview:
 
 Establish if there is a causal effect of smoking during pregnancy on the risk of the child being born with low birth weight (below 2500 grams) by analysing the data using logistic regression, including the right covariates in the model to be able to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight of the child.
 
+## Description Statistics:
+
+The descriptive statistics of the dataset are presented below. The dataset contains information about the birth weight of children and various other variables such as smoking during pregnancy, birth order of the child, age of the mother, systolic blood pressure before pregnancy, birth weight of the child, preterm birth, and child's requirement of neonatal care. - The birth weight of the child is categorized as low if it is below 2500 grams. - The high systolic blood pressure is categorized as high if it is above 135 mmHg.
+
+### Code:
 
 ```{r}
-library(dagitty)
-library(ggdag)
-library(dplyr)
+# Load the dataset
+birthweight_original <- read.csv("birthweight_original.csv")
+birthweight_analysis <- read.csv("birthweight_analysisdata.csv")
 
-# Load and preprocess the data
-birthweight_data <- read.csv("birthweight_analysisdata.csv")
-birthweight_data_reduced <- birthweight_data %>% drop_na()
-head(birthweight_data_reduced)
+# Define the variables
+table1_vars <- c("birth", "smoke", "age", "bwt", "bp_sys", "preterm", "neocare")
 
-# Define the unique node names for the DAG
-nodes <- c("smoke", "low", "age", "high_bp", "preterm", "neocare")  # Node names
-custom_labels <- c("Smoking", "Low BirthWeight", "Age", "High BP", "Preterm", "Neocare")  # Custom labels
+# Create table for descriptive statistics: using table one package
+table1 <- CreateTableOne(vars = table1_vars, data = birthweight_original, 
+                         factorVars = c("birth", "smoke", "preterm", "neocare"))
 
-# Create a valid DAG string
-dag_string <- "dag { smoke -> low; age -> low; high_bp -> low; preterm -> low; smoke -> preterm; high_bp -> neocare }"
+table2_vars <- c("birth", "smoke", "age", "low", "high_bp", "preterm", "neocare")
+table2 <- CreateTableOne(vars = table2_vars, data = birthweight_analysis, 
+          factorVars = c("birth", "smoke", "low", "high_bp", "preterm", "neocare"))
+```
+
+### Output:
+
+Here's the descriptive Statistics of Birth weight Original Data set:
+
+```{r echo=FALSE}
+print(table1, quote = FALSE, noSpaces = TRUE)
+```
+
+Here's the descriptive Statistics of Birth weight Analysis Data set:
+
+```{r echo=FALSE}
+print(table2, quote = FALSE, noSpaces = TRUE)
+```
+
+As we can see that the categorical variables are converted to factors, and the continuous variables are displayed with their mean and standard deviation. Here are some key observations from the descriptive statistics:
+
+-   40 percent of the mothers in the dataset smoked during pregnancy with the average age of the mothers being around 26 years.
+-   77.2 percent of mothers were having either their first or second born child.
+-   The average birth weight of the children is around 2840.11 grams, i.e., 31.1 percent of the children are born with low birth weight.
+-   The factorization has helped with the inference that 25.1 percent of the mothers had high blood pressure before pregnancy.
+-   11.3 percent of the children were born preterm and 15.2 percent of the children required neonatal care.
+
+## Data Cleanup:
+
+-   The variable id was a sequence number randomly assigned to each woman, and is removed as it is not relevant for the analysis.
+-   The variable wt_moth was also removed as it was not relevant for the analysis.
+-   The data was cleaned to remove any missing values and ensure that the data is ready for analysis.
+
+### Code:
+
+```{r}
+# Remove the id and wt_moth variables
+birthweight_analysis <- birthweight_analysis[, -c(4, 6)]
+# Remove any NA values
+birthweight_analysis <- na.omit(birthweight_analysis)
+```
+
+## DAG: Directed Acyclic Graph
+
+The Directed Acyclic Graph (DAG) is a graphical representation of the causal relationships between variables in the dataset.
+
+## Motivation for the DAG:
+
+The DAG is used to establish the total causal effect of smoking during pregnancy on the risk of low birth weight in children with covariates: maternal age, birth order, high systolic blood pressure before pregnancy, preterm birth, and neonatal care.
+
+The DAG is constructed based on the following motivations:
+
+**1. Smoke** $\rightarrow$ **Low Birth Weight:** Maternal smoking in pregnancy was significantly associated with a higher risk of Low Birth Weight in offspring on a global scale. The risk of maternal smoking on infant LBW seems to be increasing over time, and was higher with longer smoking duration throughout pregnancy and more cigarettes smoked daily.[@di2022]
+
+**2. Age** $\rightarrow$ **Low Birth Weight:** Both young maternal age ($<$ 20 years) and advanced maternal age ($>=$ 35 years) are associated with a higher risk of LBW due to biological and socio-economic factors showing a U-shaped relationship. Young mothers may experience nutritional deficiencies and inadequate prenatal care, while older mothers face risks such as placental insufficiency and pregnancy complications. [@reichman1997]
+
+**3. High BP** $\rightarrow$ **Low Birth Weight:** Pre-pregnancy high systolic blood pressure is inversely associated with offspring birth weight, with higher blood pressure linked to smaller babies for gestational age. This suggests that maternal cardiovascular risk factors, even before conception, can influence fetal growth and may have long-term implications for both maternal and offspring health. [@romundstad2007]
+
+**4. Preterm** $\rightarrow$ **Low Birth Weight:** Preterm birth (delivery before 37 weeks of gestation) is one of the strongest predictors of LBW because preterm infants have insufficient time for optimal growth in uterus. Most preterm infants weigh less than 2500 grams at birth, primarily due to their shorter gestation period. [@goldenberg2008]
+
+**5. Age** $\rightarrow$ **Smoke:** Smoking during pregnancy is more prevalent in younger mothers ($<$ 20 years) and is associated with higher rates of low birth weight and preterm birth. Younger mothers ($<$ 20 years) are more likely to smoke during pregnancy due to socio-economic factors such as stress, lack of education, and lower healthcare access. Older mothers ($>=$ 35 years) are less likely to smoke during pregnancy, but may have other risk factors for adverse birth outcomes.[@Cnattingius2004]
+
+**6. Smoke** $\rightarrow$ **Preterm:** Smoking during pregnancy is associated with an increased risk of preterm birth, with stronger effects observed for heavy smoking and exposure in late pregnancy. Passive smoking also increases the risk of early preterm birth. Quitting smoking during pregnancy is associated with improved birth outcomes compared to continued smoking. [@jaddoe2008]
+
+**7. Age** $\rightarrow$ **Preterm:** Maternal age shows a U-shaped relationship with preterm birth risk, with the highest risks observed in mothers under 15 years (relative risk 1.569) and above 34 years (relative risk 1.572). The risk increases steeply for women over 40, with most preterm births among older mothers being “late” preterms (34–36 weeks). Women aged 20–34 have the lowest risk, serving as the control group. [@mousiolias2012]
+
+**8. Birth** $\rightarrow$ **Preterm:** Birth order (parity) affects the likelihood of preterm birth. First pregnancies (primiparity) are associated with a higher risk of preterm birth due to biological factors and uterine readiness. In contrast, higher parity (multiple previous births) may also increase the risk due to uterine overdistension or scarring. [@Ananth2006]
+
+**9. High BP** $\rightarrow$ **Neocare and High BP** $\rightarrow$ **PreTerm:** High BP prior to or in early pregnancy was associated with adverse pregnancy outcomes and neonatal outcomes. High blood pressure before pregnancy increases the odds of preterm birth by 1.66 times and neonatal intensive care unit admission by 1.22 times. [@jin2023]
+
+**10. Low** $\rightarrow$ **Neocare and Preterm** $\rightarrow$ **Neocare:** Low birth weight is identified as the most critical factor contributing to neonatal mortality, accounting for 10% of deaths globally and necessitating specialized neonatal care for survival. Among LBW neonates, complications such as congenital anomalies (34%) and birth asphyxia (14%) further highlight the direct link between LBW and the need for neonatal care. However, Preterm neonates (gestational age $<$ 37 weeks) had significantly higher mortality rates (32.5%) compared to term small-for-gestational-age neonates (18.9%). This highlights the vulnerability of preterm infants to complications like prematurity-related issues (43%), necessitating intensive neonatal care. [@dsa2016]
+
+**11. Age** $\rightarrow$ **High BP:** Maternal age is positively associated with high systolic blood pressure before pregnancy, with an accelerated rise in systolic blood pressure observed as women age. This age-related increase is further exacerbated by menopause, contributing to heightened cardiovascular risks in middle-aged and elderly women. [@rosenthal2000]
+
+**12. Smoke** $\rightarrow$ **Neocare:** Maternal smoking during pregnancy is associated with a significant decrease in birthweight, with a stronger effect observed in boys compared to girls. Infants exposed to prenatal smoking are more likely to have low birthweight and require neonatal intensive care, highlighting the need for prenatal counseling to reduce smoking during pregnancy. [@tayie2012]
+
+**13. Age** $\rightarrow$ **Birth:** Maternal age is inversely associated with birth order, with younger mothers more likely to have higher birth orders due to earlier childbearing. This relationship is influenced by socio-economic factors, cultural norms, and fertility preferences, with younger mothers often having more children compared to older mothers. The birth order will not affect the maternal age, but the maternal age will affect the birth order.
+
+**14. Birth** $\rightarrow$ **Low:** First-order births are associated with a higher incidence of low birth weight compared to higher-order births, regardless of maternal age, with 60.45% of first-order births being low birth weight versus 48.79% for higher orders. This suggests that birth order influences birth weight, with subsequent births generally having a lower risk of low birth weight. [@nmaitrabpatelmhazra1995]
+
+Absence of arrows between the following is explained by the lack of direct causal relationship between them:
+
+**1. High BP and Smoke:** High SBP before pregnancy can also arise independently of smoking, linked to broader metabolic and cardiovascular conditions.This meta-analysis on high BP and pregnancy outcomes does not identify smoking as a direct factor influencing pre-pregnancy SBP. Smoking is analyzed as a confounder rather than a causal factor. [@jin2023]
+
+**2. High BP and Birth:** It is difficult to establish a direct causal relationship between high blood pressure before pregnancy and birth order, as high BP is a pre-existing condition that may not be influenced by the number of previous births. The relationship between high BP and birth order is likely mediated by other factors such as maternal age, genetic predisposition, and lifestyle factors. Hence, we do not include a direct arrow between high BP and birth order in the DAG.
+
+**3. Birth and Smoke:** There may be no direct relationship between birth order and maternal smoking during pregnancy because smoking behavior is more likely influenced by individual factors such as socioeconomic status, education level, stress, and cultural norms, rather than the number of children a woman has. Birth order itself does not inherently impact a mother’s decision to smoke.
+
+**8. Age and Neocare:** Maternal age does not contribute significantly to major morbidity of preterm neonates at discharge from neonatal intensive care. [@eventov-friedman2015]
+
+**9. Birth and Neocare:** Neonatal care and birth order are not directly related because the observed variations in neonatal outcomes with birth order, such as neonatal death rates, are largely influenced by confounding factors like maternal age, parity-related biological changes, and individual susceptibility to adverse outcomes, rather than birth order itself. These effects are intertwined and cannot solely be attributed to the order of the child. [@james1970]
+
+### Code:
+
+```{r}
+# Adjusted DAG String with smoking as exposure and low birth weight as the outcome
+dag_string <- "dag { 
+  smoke [exposure]; 
+  low [outcome]; 
+  smoke -> low; 
+  age -> low; 
+  high_bp -> low; 
+  preterm -> low; 
+  age -> smoke; 
+  smoke -> preterm; 
+  age -> preterm; 
+  birth -> preterm; 
+  high_bp -> neocare; 
+  high_bp -> preterm; 
+  low -> neocare; 
+  preterm -> neocare; 
+  age -> high_bp;
+  smoke -> neocare;
+  age -> birth;
+  birth -> low;
+}"
 
 # Generate the DAG
 dag <- dagitty(dag_string)
 
-# Define a mapping for custom node labels
-node_labels <- data.frame(
-  node = nodes,
-  label = custom_labels
-)
+# Extract DAG data for plotting
+tidy_dag <- tidy_dagitty(dag, layout = "circle") %>%
+  mutate(
+    label = case_when(
+      name == "birth" ~ "Birth Order",
+      name == "smoke" ~ "Smoking",
+      name == "age" ~ "Age",
+      name == "low" ~ "Low BirthWeight",
+      name == "high_bp" ~ "High BP",
+      name == "preterm" ~ "Preterm",
+      name == "neocare" ~ "Neocare",
+      TRUE ~ name
+    ),
+    # Highlight exposure and outcome nodes
+    node_type = case_when(
+      name == "smoke" ~ "Exposure",
+      name == "low" ~ "Outcome",
+      TRUE ~ "Other"
+    )
+  )
 
-# Plot the DAG with custom labels
-ggdag(dag) +
-  geom_dag_node(aes(fill = name), shape = 21, size = 10) +  # Customize node shape and size
-  geom_dag_text(aes(label = label), data = node_labels, size = 6, color = "black") +  # Add custom labels
-  scale_fill_manual(values = c("red", "blue", "green", "yellow", "purple", "orange")) +  # Custom colors
+# Plot the DAG with custom labels and node highlighting
+ggdag(tidy_dag) +
+  geom_dag_node(aes(fill = node_type), shape = 21, size = 10) +  # Highlight nodes
+  geom_dag_text(aes(label = label), size = 4, color = "black") +  # Add custom labels
+  scale_fill_manual(
+    values = c("Exposure" = "red", "Outcome" = "blue", "Other" = "orange")
+  ) +  # Colors for exposure, outcome, and other nodes
   theme_dag() +
-  ggtitle("Customized DAG")
+  ggtitle("DAG: Smoking as Exposure and Low BirthWeight as Outcome")
+
 ```
+
+## Data Manipulation:
+
+**Categorization of Variables:**
+
+**Age:** The age variable was categorized into young ($<$ 20 years), middle (20-34 years), and old ($>=$ 35 years) to reflect the established thresholds for advanced maternal age and teenage pregnancy, both of which are associated with significant maternal and neonatal health risks. This categorization is supported by literature indicating distinct patterns of hypertension, preterm birth, and neonatal outcomes across these age groups. Additionally, it enables clearer identification of at-risk populations for targeted interventions.
+
+**Birth Order:** The birth order variable was categorized into primiparity (first pregnancy), low parity (2-3 pregnancies), and high parity (4 or more pregnancies) to capture the differential risks associated with pregnancy outcomes. Literature indicates that primiparity is linked to higher risks of preterm birth due to uterine immaturity, while high parity is associated with risks like uterine overdistension and scarring, which can impact neonatal outcomes. This categorization ensures alignment with known clinical thresholds for understanding parity-related risks.
+
+### Code:
+
+```{r}
+# Categorise age into young, middle, and old
+birthweight_analysis$age <- cut(birthweight_analysis$age, breaks = c(0, 20, 34, 100), 
+       labels = c("young", "middle", "old"), right = FALSE)
+# Categorise birth order into primiparity, low parity, and high parity
+birthweight_analysis$birth <- cut(birthweight_analysis$birth, breaks = c(0, 1, 3, 100), 
+       labels = c("primiparity", "low parity", "high parity"), right = FALSE)
+```
+
+## Covariate Selection:
+
+**1. Smoking (smoke):** Smoking during pregnancy is the primary exposure variable in this study and directly affects low birth weight (low) as per the DAG (smoke → low). Smoking also influences preterm birth (smoke → preterm) and high blood pressure (smoke → high_bp), indirectly contributing to low birth weight.
+
+**2. Low Birth Weight (low):** Low birth weight is the outcome variable in the DAG and is directly affected by smoking (smoke → low), high blood pressure (high_bp → low), preterm birth (preterm → low), and maternal age (age → low).
+
+**3. Age (age):** Maternal age acts as a confounder, influencing smoking behavior (age → smoke), preterm birth (age → preterm), high blood pressure (age → high_bp), and low birth weight (age → low). It is crucial to adjust for maternal age to estimate the total causal effect of smoking on low birth weight.
+
+**4. High Blood Pressure (high_bp):** High systolic blood pressure before pregnancy directly affects the risk of low birth weight (high_bp → low) and preterm birth (high_bp → preterm). It is also influenced by maternal age (age → high_bp) and mediates part of the pathway from age to low birth weight.
+
+**5. Preterm Birth (preterm):** Preterm birth mediates the relationship between smoking and low birth weight in the DAG (smoke → preterm → low) and is also influenced by maternal age (age → preterm), high blood pressure (high_bp → preterm), and birth order (birth → preterm).
+
+**6. Birth Order (birth):** Birth order indirectly affects low birth weight by influencing preterm birth (birth → preterm). It is connected to other variables like maternal age but does not directly impact smoking or low birth weight in the DAG.
+
+**7. Neonatal Care (neocare):** Neonatal care is a downstream outcome of low birth weight (low → neocare) and preterm birth (preterm → neocare). It does not directly influence smoking or low birth weight and should not be adjusted in the analysis.
+
+Here is the list of paths from smoke to low based on the provided DAG and justification for control:
+
+| Path | Justification |
+|------------------------------------|------------------------------------|
+| smoke → low | Direct path; we do not control for it as this is the causal effect of interest. |
+| smoke → preterm → low | preterm is a mediator; we do not control for it to estimate the total causal effect of smoking on low birth weight. |
+| smoke ← age → low | age is a confounder and a fork; we control for it to block the backdoor path. |
+| smoke ← age → high_bp → low | age is a confounder and a fork; we control for it. high_bp is a mediator; we do not control for it. |
+| smoke ← age → birth → low | age is a confounder and a fork; we control for it. birth is a mediator; we do not control for it. |
+| smoke ← age → high_bp → preterm → low | age and high_bp are confounders; we control for both. preterm is a mediator; we do not control for it. |
+| smoke ← age → birth → preterm → low | age is a confounder and a fork; we control for it. birth and preterm are mediators; we do not control for them. |
+| smoke → preterm → neocare ← low | preterm is a mediator; we do not control for it. neocare is a collider; we do not control for it. |
+| smoke → neocare ← low | neocare is a collider; we do not control for it. |
+
+Summary:
+
+-   Control for:
+    -   age (confounder and fork).
+    -   high_bp (confounder).
+-   Do not control for:
+    -   preterm (mediator).
+    -   birth (mediator).
+    -   neocare (collider and downstream variable).
+    -   low (outcome).
+
+This ensures proper estimation of the total causal effect of smoking on low birth weight while avoiding over adjustment or collider bias.
+
+### Logistic Regression Model:
+
+Let us test the logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children, adjusting for maternal age and high systolic blood pressure before pregnancy.
+
+Logistic regression model formula: low ~ smoke + age + high_bp
+
+```{r}
+# Build the logistic regression model
+model <- glm(low ~ smoke + age + high_bp, data = birthweight_analysis, 
+             family = binomial)
+summary(model)
+
+# Calculate odds ratios and 95% confidence intervals
+exp(cbind(Odds_Ratio = coef(model), confint(model)))
+```
+
+#### Interpretation:
+
+
+Now, let us check the logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children, adjusting for maternal age.
+
+Logistic regression model formula: low ~ smoke + age
+
+```{r}
+# Build the logistic regression model
+model2 <- glm(low ~ smoke + age, data = birthweight_analysis, family = binomial)
+summary(model2)
+
+# Calculate odds ratios and 95% confidence intervals
+exp(cbind(Odds_Ratio = coef(model2), confint(model2)))
+```
+
+
+#### Interpretation:
+
+
+Now, let us check the logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children, adjusting for high systolic blood pressure before pregnancy.
+
+Logistic regression model formula: low ~ smoke + high_bp
+
+```{r}
+# Build the logistic regression model
+model3 <- glm(low ~ smoke + high_bp, data = birthweight_analysis, family = binomial)
+summary(model3)
+
+# Calculate odds ratios and 95% confidence intervals
+exp(cbind(Odds_Ratio = coef(model3), confint(model3)))
+```
+
+#### Interpretation:
+
+
+Finally, let us check the logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children without adjusting for any covariates.
+
+Logistic regression model formula: low ~ smoke
+
+```{r}
+# Build the logistic regression model
+model4 <- glm(low ~ smoke, data = birthweight_analysis, family = binomial)
+summary(model4)
+
+# Calculate odds ratios and 95% confidence intervals
+exp(cbind(Odds_Ratio = coef(model4), confint(model4)))
+```
+
+#### Interpretation:
+
+
+## Conclusion:
+
+
+
+
+# References
