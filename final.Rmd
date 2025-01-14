@@ -29,17 +29,17 @@ library(ggplot2)
 
 Research question : *Is there a causal effect of smoking during pregnancy on the risk of the child being born with low birth weight (below 2500 grams)?*
 
-Analyse the data using logistic regression, include the right covariates in the model to be able to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight of the child by using the Directed Acyclic Graph (DAG) and interpret the results to answer the research question.
+The birth weight datasets contain information about the birth weight of children, smoking during pregnancy and various other variables such as birth order of the child, age of the mother, systolic blood pressure before pregnancy, birth weight of the child, preterm birth, sequence id assigned to the mother and child's requirement of neonatal care.
 
-Let's start by loading the dataset and performing some initial data exploration.
+We use logistic regression with covariates identified through the Directed Acyclic Graph (DAG) to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children. The results will be interpreted to address the research question effectively.
 
-But, before that let's clean and prepare the data to make sure that meaningful analysis can be performed on it.
+We will begin by loading the dataset and performing initial data exploration. Prior to this, we will clean and prepare the data to ensure it is suitable for meaningful analysis.
 
 ## Data Cleanup:
 
 -   The variable id was a sequence number randomly assigned to each woman, and is removed as it is not relevant for the analysis.
 -   There were NA values found in the birthweight_analysis dataset which were removed to ensure that the analysis is performed on complete data.
--   There was a negative value found in the variable 'bp_sys' in the birthweight_original dataset which was removed as it was not possible to have a negative systolic blood pressure value.
+-   There was a negative value found in the variable 'bp_sys' (systolic blood pressure before pregnancy in mmHg) in the birthweight_original dataset which was removed as it was not possible to have a negative systolic blood pressure value.
 
 ### Code:
 
@@ -59,11 +59,12 @@ birthweight_analysis <- na.omit(birthweight_analysis)
 birthweight_original <- birthweight_original[birthweight_original$bp_sys > 0, ]
 ```
 
+Limitations such as missing data handling and negative values should be considered when interpreting the results. Although, we the randomness of the missing data could not be confirmed in this report, the number of missing values were three out of 487 observations in the birthweight_analysis dataset, the removal of these observations may not significantly impact the analysis. The one data entry with negative value in the systolic blood pressure variable was removed to ensure data integrity and consistency.
+
+
 ## Description Statistics:
 
-Now, let us preform the descriptive statistics of the dataset to understand the distribution of variables and identify any patterns or trends that may be relevant for the analysis.
-
-The birth weight datasets contain information about the birth weight of children, smoking during pregnancy and various other variables such as birth order of the child, age of the mother, systolic blood pressure before pregnancy, birth weight of the child, preterm birth, and child's requirement of neonatal care.
+Next, we will conduct descriptive statistics to examine the distribution of variables and uncover any relevant patterns or trends in the dataset. Using the tableone package, we will generate summary statistics for both the original birth weight dataset and the analysis dataset. This step will provide valuable insights into the characteristics of the study population, setting the stage for further analysis.
 
 In the birth weight analysis dataset, the variables are categorized as follows:
 
@@ -107,7 +108,7 @@ Here are some key observations from the descriptive statistics of original birth
 
 -   **11.3 percent** of the children were born preterm and **15.2 percent** of the children required neonatal care.
 
-Here's the Descriptive Statistics of Birth weight Analysis Data set, after categorizing the birth weight as low if it is below 2500 grams and high systolic blood pressure as high_bp if it is above 135 mmHg:
+Here's the Descriptive Statistics of Birth weight Analysis Data set:
 
 ```{r}
 print(table2, quote = FALSE, noSpaces = TRUE)
@@ -137,49 +138,49 @@ The Directed Acyclic Graph (DAG) is a graphical representation of the causal rel
 
 The DAG is used to establish the total causal effect of smoking during pregnancy on the risk of low birth weight in children with covariates: maternal age, birth order, high systolic blood pressure before pregnancy, preterm birth, and neonatal care.
 
-It ensures that confounders like maternal age and high systolic blood pressure are identified and adjusted for to block non-causal backdoor paths. Simultaneously, it prevents over adjustment by avoiding control of mediators (e.g., preterm birth) or downstream variables (e.g., neonatal care). This approach ensures that the estimated effect reflects the true total causal relationship between smoking and low birth weight.
+It ensures that we capture all the direct and indirect effects of smoking on low birth weight by including all relevant confounders and mediators in the model. This approach ensures that the estimated effect reflects the true total causal relationship between smoking and low birth weight.
 
 The DAG is constructed based on the following motivations:
 
-**1. Smoke $\rightarrow$ Low Birth Weight:** Maternal smoking in pregnancy was significantly associated with a higher risk of Low Birth Weight in offspring on a global scale. The risk of maternal smoking on infant LBW seems to be increasing over time, and was higher with longer smoking duration throughout pregnancy and more cigarettes smoked daily. Hence, we can conclude that the casual direction of effect is from smoking during pregnancy to low birth weight in children. [@di2022]
+**1. Smoke $\rightarrow$ Low Birth Weight:** Maternal smoking in pregnancy was significantly associated with a higher risk of Low Birth Weight in offspring on a global scale. The risk of maternal smoking on infant LBW seems to be increasing over time, and was higher with longer smoking duration throughout pregnancy and more cigarettes smoked daily. Hence, we can conclude that the causal direction of effect is from smoking during pregnancy to low birth weight in children. [@di2022]
 
-**2. Age $\rightarrow$ Low Birth Weight:** Both young maternal age ($<$ 20 years) and advanced maternal age ($>=$ 35 years) are associated with a higher risk of LBW due to biological and socio-economic factors showing a U-shaped relationship. Young mothers may experience nutritional deficiencies and inadequate prenatal care, while older mothers face risks such as placental insufficiency and pregnancy complications. Hence, we can conclude that the casual direction of effect is from the maternal age to low birth weight in children. [@reichman1997]
+**2. Age $\rightarrow$ Low Birth Weight:** Both young maternal age ($<$ 20 years) and advanced maternal age ($>=$ 35 years) are associated with a higher risk of LBW due to biological and socio-economic factors showing a U-shaped relationship. Young mothers may experience nutritional deficiencies and inadequate prenatal care, while older mothers face risks such as placental insufficiency and pregnancy complications. Hence, we can conclude that the causal direction of effect is from the maternal age to low birth weight in children. [@reichman1997]
 
-**3. High BP $\rightarrow$ Low Birth Weight:** Pre-pregnancy high systolic blood pressure is inversely associated with offspring birth weight, with higher blood pressure linked to smaller babies for gestational age. This suggests that maternal cardiovascular risk factors, even before conception, can influence fetal growth and may have long-term implications for both maternal and offspring health. Hence, we can conclude that the casual direction of effect is from pre-pregnancy high systolic blood pressure to low birth weight in children. [@romundstad2007]
+**3. High BP $\rightarrow$ Low Birth Weight:** Pre-pregnancy high systolic blood pressure is inversely associated with offspring birth weight, with higher blood pressure linked to smaller babies for gestational age. This suggests that maternal cardiovascular risk factors, even before conception, can influence fetal growth and may have long-term implications for both maternal and offspring health. Hence, we can conclude that the causal direction of effect is from pre-pregnancy high systolic blood pressure to low birth weight in children. [@romundstad2007]
 
-**4. Preterm $\rightarrow$ Low Birth Weight:** Preterm birth (delivery before 37 weeks of gestation) is one of the strongest predictors of LBW because preterm infants have insufficient time for optimal growth in uterus. Most preterm infants weigh less than 2500 grams at birth, primarily due to their shorter gestation period. Hence, we can conclude that the casual direction of effect is from child born preterm to low birth weight in children and not the other way around. [@goldenberg2008]
+**4. Preterm $\rightarrow$ Low Birth Weight:** Preterm birth (delivery before 37 weeks of gestation) is one of the strongest predictors of LBW because preterm infants have insufficient time for optimal growth in uterus. Most preterm infants weigh less than 2500 grams at birth, primarily due to their shorter gestation period. Hence, we can conclude that the causal direction of effect is from child born preterm to low birth weight in children and not the other way around. [@goldenberg2008]
 
-**5. Age $\rightarrow$ Smoke:** Smoking during pregnancy is more prevalent in younger mothers ($<$ 20 years) and is associated with higher rates of low birth weight and preterm birth. Younger mothers ($<$ 20 years) are more likely to smoke during pregnancy due to socio-economic factors such as stress, lack of education, and lower healthcare access. Older mothers ($>=$ 35 years) are less likely to smoke during pregnancy, but may have other risk factors for adverse birth outcomes. Hence, we can conclude that the casual direction of effect is from the age of the mother to her smoking during pregnancy.[@Cnattingius2004]
+**5. Age $\rightarrow$ Smoke:** Smoking during pregnancy is more prevalent in younger mothers ($<$ 20 years) and is associated with higher rates of low birth weight and preterm birth. Younger mothers ($<$ 20 years) are more likely to smoke during pregnancy due to socio-economic factors such as stress, lack of education, and lower healthcare access. Older mothers ($>=$ 35 years) are less likely to smoke during pregnancy, but may have other risk factors for adverse birth outcomes. Hence, we can conclude that the causal direction of effect is from the age of the mother to her smoking during pregnancy.[@Cnattingius2004]
 
-**6. Smoke $\rightarrow$ Preterm:** Smoking during pregnancy is associated with an increased risk of preterm birth, with stronger effects observed for heavy smoking and exposure in late pregnancy. Passive smoking also increases the risk of early preterm birth. Quitting smoking during pregnancy is associated with improved birth outcomes compared to continued smoking. Hence, we can conclude that the casual direction of effect is from the smoking during pregnancy to child born preterm. [@jaddoe2008]
+**6. Smoke $\rightarrow$ Preterm:** Smoking during pregnancy is associated with an increased risk of preterm birth, with stronger effects observed for heavy smoking and exposure in late pregnancy. Passive smoking also increases the risk of early preterm birth. Quitting smoking during pregnancy is associated with improved birth outcomes compared to continued smoking. Hence, we can conclude that the causal direction of effect is from the smoking during pregnancy to child born preterm. [@jaddoe2008]
 
-**7. Age $\rightarrow$ Preterm:** Maternal age shows a U-shaped relationship with preterm birth risk, with the highest risks observed in mothers under 15 years (relative risk 1.569) and above 34 years (relative risk 1.572). The risk increases steeply for women over 40, with most preterm births among older mothers being “late” preterms (34–36 weeks). Women aged 20–34 have the lowest risk, serving as the control group. Hence, we can conclude that the casual direction of effect is from the age of the mother to child born preterm. [@mousiolias2012]
+**7. Age $\rightarrow$ Preterm:** Maternal age shows a U-shaped relationship with preterm birth risk, with the highest risks observed in mothers under 15 years (relative risk 1.569) and above 34 years (relative risk 1.572). The risk increases steeply for women over 40, with most preterm births among older mothers being “late” preterms (34–36 weeks). Women aged 20–34 have the lowest risk, serving as the control group. Hence, we can conclude that the causal direction of effect is from the age of the mother to child born preterm. [@mousiolias2012]
 
-**8. Birth $\rightarrow$ Preterm:** Birth order (parity) affects the likelihood of preterm birth. First pregnancies (primiparity) are associated with a higher risk of preterm birth due to biological factors and uterine readiness. In contrast, higher parity (multiple previous births) may also increase the risk due to uterine overdistension or scarring. Hence, we can conclude that the casual direction of effect is from the birth order of the child to child born preterm. [@Ananth2006]
+**8. Birth $\rightarrow$ Preterm:** Birth order (parity) affects the likelihood of preterm birth. First pregnancies (primiparity) are associated with a higher risk of preterm birth due to biological factors and uterine readiness. In contrast, higher parity (multiple previous births) may also increase the risk due to uterine overdistension or scarring. Hence, we can conclude that the causal direction of effect is from the birth order of the child to child born preterm. [@Ananth2006]
 
-**9. High BP $\rightarrow$ Neocare** and **High BP $\rightarrow$ Preterm:** High BP prior to or in early pregnancy was associated with adverse pregnancy outcomes and neonatal outcomes. High blood pressure before pregnancy increases the odds of preterm birth by 1.66 times and neonatal intensive care unit admission by 1.22 times. Hence, we can conclude that the casual direction of effect is from the pre-pregnancy high systolic blood pressure to child born preterm and child requiring neocare.[@jin2023]
+**9. High BP $\rightarrow$ Neocare** and **High BP $\rightarrow$ Preterm:** High BP prior to or in early pregnancy was associated with adverse pregnancy outcomes and neonatal outcomes. High blood pressure before pregnancy increases the odds of preterm birth by 1.66 times and neonatal intensive care unit admission by 1.22 times. Hence, we can conclude that the causal direction of effect is from the pre-pregnancy high systolic blood pressure to child born preterm and child requiring neocare.[@jin2023]
 
-**10. Low $\rightarrow$ Neocare** and **Preterm $\rightarrow$ Neocare:** Low birth weight is identified as the most critical factor contributing to neonatal mortality, accounting for 10% of deaths globally and necessitating specialized neonatal care for survival. Among LBW neonates, complications such as congenital anomalies (34%) and birth asphyxia (14%) further highlight the direct link between LBW and the need for neonatal care. However, Preterm neonates (gestational age $<$ 37 weeks) had significantly higher mortality rates (32.5%) compared to term small-for-gestational-age neonates (18.9%). This highlights the vulnerability of preterm infants to complications like prematurity-related issues (43%), necessitating intensive neonatal care. Hence, we can conclude that the casual direction of effect is from the child born preterm and low birth weight of the child to child requiring neocare.[@dsa2016]
+**10. Low $\rightarrow$ Neocare** and **Preterm $\rightarrow$ Neocare:** Low birth weight is identified as the most critical factor contributing to neonatal mortality, accounting for 10% of deaths globally and necessitating specialized neonatal care for survival. Among LBW neonates, complications such as congenital anomalies (34%) and birth asphyxia (14%) further highlight the direct link between LBW and the need for neonatal care. However, Preterm neonates (gestational age $<$ 37 weeks) had significantly higher mortality rates (32.5%) compared to term small-for-gestational-age neonates (18.9%). This highlights the vulnerability of preterm infants to complications like prematurity-related issues (43%), necessitating intensive neonatal care. Hence, we can conclude that the causal direction of effect is from the child born preterm and low birth weight of the child to child requiring neocare.[@dsa2016]
 
-**11. Age $\rightarrow$ High BP:** Maternal age is positively associated with high systolic blood pressure before pregnancy, with an accelerated rise in systolic blood pressure observed as women age. This age-related increase is further exacerbated by menopause, contributing to heightened cardiovascular risks in middle-aged and elderly women. Hence, we can conclude that the casual direction of effect is from the maternal age to pre-pregnancy high systolic blood pressure. [@rosenthal2000]
+**11. Age $\rightarrow$ High BP:** Maternal age is positively associated with high systolic blood pressure before pregnancy, with an accelerated rise in systolic blood pressure observed as women age. This age-related increase is further exacerbated by menopause, contributing to heightened cardiovascular risks in middle-aged and elderly women. Hence, we can conclude that the causal direction of effect is from the maternal age to pre-pregnancy high systolic blood pressure. [@rosenthal2000]
 
-**12. Smoke $\rightarrow$ Neocare:** Maternal smoking during pregnancy is associated with a significant decrease in birthweight, with a stronger effect observed in boys compared to girls. Infants exposed to prenatal smoking are more likely to have low birthweight and require neonatal intensive care, highlighting the need for prenatal counseling to reduce smoking during pregnancy. Hence, we can conclude that the casual direction of effect is from the smoking during pregnancy to child requiring neocare.[@tayie2012]
+**12. Smoke $\rightarrow$ Neocare:** Maternal smoking during pregnancy is associated with a significant decrease in birthweight, with a stronger effect observed in boys compared to girls. Infants exposed to prenatal smoking are more likely to have low birthweight and require neonatal intensive care, highlighting the need for prenatal counseling to reduce smoking during pregnancy. Hence, we can conclude that the causal direction of effect is from the smoking during pregnancy to child requiring neocare.[@tayie2012]
 
 **13. Age $\rightarrow$ Birth:** Maternal age is inversely associated with birth order, with younger mothers more likely to have higher birth orders due to earlier childbearing. This relationship is influenced by socio-economic factors, cultural norms, and fertility preferences, with younger mothers often having more children compared to older mothers. The birth order will not affect the maternal age, but the maternal age will affect the birth order.
 
-**14. Birth $\rightarrow$ Low:** First-order births are associated with a higher incidence of low birth weight compared to higher-order births, regardless of maternal age, with 60.45% of first-order births being low birth weight versus 48.79% for higher orders. This suggests that birth order influences birth weight, with subsequent births generally having a lower risk of low birth weight. [@nmaitrabpatelmhazra1995]
+**14. Birth $\rightarrow$ Low:** First-order births are associated with a higher incidence of low birth weight compared to higher-order births, regardless of maternal age, with 60.45% of first-order births being low birth weight versus 48.79% for higher orders. This suggests that birth order influences birth weight, with subsequent births generally having a lower risk of low birth weight. Hence, we can conclude that the causal direction of effect is from the birth order of the child to low birth weight of the child.[@nmaitrabpatelmhazra1995]
 
 Absence of arrows between the following is explained by the lack of direct causal relationship between them:
 
-**1. High BP and Smoke:** High SBP before pregnancy can also arise independently of smoking, linked to broader metabolic and cardiovascular conditions.This meta-analysis on high BP and pregnancy outcomes does not identify smoking as a direct factor influencing pre-pregnancy SBP. Smoking is analyzed as a confounder rather than a causal factor. [@jin2023]
+**1. High BP and Smoke:** A meta-analysis on high BP and pregnancy outcomes failed to identify smoking as a direct factor influencing pre-pregnancy systolic blood pressure (SBP). High SBP before pregnancy can also arise independently of smoking, linked to broader metabolic and cardiovascular conditions. Hence, we cannot establish a direct causal relationship between high BP and smoking during pregnancy. [@jin2023]
 
 **2. High BP and Birth:** It is difficult to establish a direct causal relationship between high blood pressure before pregnancy and birth order, as high BP is a pre-existing condition that may not be influenced by the number of previous births. The relationship between high BP and birth order is likely mediated by other factors such as maternal age, genetic predisposition, and lifestyle factors. Hence, we do not include a direct arrow between high BP and birth order in the DAG.
 
-**3. Birth and Smoke:** There may be no direct relationship between birth order and maternal smoking during pregnancy because smoking behavior is more likely influenced by individual factors such as socioeconomic status, education level, stress, and cultural norms, rather than the number of children a woman has. Birth order itself does not inherently impact a mother’s decision to smoke.
+**3. Birth and Smoke:** There may be no direct relationship between birth order and maternal smoking during pregnancy because smoking behavior is more likely influenced by individual factors such as socioeconomic status, education level, stress, and cultural norms, rather than the number of children a woman has. Birth order itself does not inherently impact a mother’s decision to smoke. Due to lack of direct evidence supporting a causal relationship between birth order and smoking in literature, we do not include an arrow between these variables in the DAG.
 
-**4. Age and Neocare:** Maternal age does not contribute significantly to major morbidity of preterm neonates at discharge from neonatal intensive care. [@eventov-friedman2015]
+**4. Age and Neocare:** Maternal age does not contribute significantly to major morbidity of preterm neonates at discharge from neonatal intensive care. Hence, we do not include a direct arrow between maternal age and child requiring neocare. [@eventov-friedman2015]
 
-**5. Birth and Neocare:** Neonatal care and birth order are not directly related because the observed variations in neonatal outcomes with birth order, such as neonatal death rates, are largely influenced by confounding factors like maternal age, parity-related biological changes, and individual susceptibility to adverse outcomes, rather than birth order itself. These effects are intertwined and cannot solely be attributed to the order of the child. [@james1970]
+**5. Birth and Neocare:** Neonatal care and birth order are not directly related because the observed variations in neonatal outcomes with birth order, such as neonatal death rates, are largely influenced by confounding factors like low birth weight and child being born preterm, rather than birth order itself. Hence, we cannot conclude that birth order will affect the child requiring neocare. [@james1970]
 
 ### Code:
 
@@ -213,44 +214,51 @@ dag <- dagitty(dag_string)
 tidy_dag <- tidy_dagitty(dag, layout = "circle") %>%
   mutate(
     label = case_when(
-      name == "birth" ~ "Birth Order",
-      name == "smoke" ~ "Smoking",
+      name == "birth" ~ "Birth",
+      name == "smoke" ~ "Smoke",
       name == "age" ~ "Age",
       name == "low" ~ "Low",
-      name == "high_bp" ~ "High BP",
+      name == "high_bp" ~ "High_BP",
       name == "preterm" ~ "Preterm",
       name == "neocare" ~ "Neocare",
       TRUE ~ name
     ),
     # Highlight exposure and outcome nodes
     node_type = case_when(
-      name == "smoke" ~ "Exposure",
-      name == "low" ~ "Outcome",
-      TRUE ~ "Other Variables"
+      name == "smoke" ~ "Exposure: Smoking",
+      name == "low" ~ "Outcome: Low Birth Weight",
+      name == "age" ~ "Age",
+      name == "high_bp" ~ "High_BP",
+      name == "preterm" ~ "Preterm",
+      name == "neocare" ~ "Neocare",
+      name == "birth" ~ "Birth Order"
     )
   )
 
 # Plot the DAG with custom labels and node highlighting
 ggdag(tidy_dag) +
-  geom_dag_node(aes(fill = node_type), shape = 21, size = 10) +  # Highlight nodes
-  geom_dag_text(aes(label = label), size = 4, color = "black") +  # Add custom labels
+   # Highlight nodes
+  geom_dag_node(aes(fill = node_type), shape = 21, size = 13, color = "black") + 
+  geom_dag_text(aes(label = label), size = 2, color = "white") +  # Add custom labels
   scale_fill_manual(
-    values = c("Exposure" = "red", "Outcome" = "blue", "Other Variables" = "orange")
+    values = c("Exposure: Smoking" = "darkred", "Outcome: Low Birth Weight" = "darkblue",
+               "Age" = "darkorange", "High_BP" = "darkorange", "Preterm" = "darkorange",
+               "Neocare" = "darkorange", "Birth Order" = "darkorange"),
   ) +  # Colors for exposure, outcome, and other nodes
   theme_dag() +
   ggtitle("DAG: Smoking as Exposure and Low BirthWeight as Outcome")
 
 ```
 
-Based on the reviewed literature, maternal age is commonly categorized as young, middle, and old, rather than treated as a continuous variable. Similarly, birth order is often classified into groups such as first, second and third, and four or more. To align with these practices and simplify the analysis, we will perform data manipulation to categorize these variables accordingly.
+Based on the reviewed literature and the results of the descriptive statistics, we see that maternal age can be categorized as young, middle, and old, rather than treated as a continuous variable. Similarly, birth order can be classified into groups such as first, second, and third or more. To align with these practices and simplify the analysis, we will perform data manipulation to categorize these variables accordingly. 
 
 ## Data Manipulation:
 
 **Categorization of Variables:**
 
-**Age:** The age variable was categorized into young ($<$ 20 years), middle (20-34 years), and old ($>=$ 35 years) to reflect the established thresholds for advanced maternal age and teenage pregnancy, both of which are associated with significant maternal and neonatal health risks. This categorization is supported by literature indicating distinct patterns of hypertension, preterm birth, and neonatal outcomes across these age groups. Additionally, it enables clearer identification of at-risk populations for targeted interventions.
+**Age:** The age variable was categorized into young ($<$ 20 years), middle (20-34 years), and old ($>=$ 35 years) to reflect the well established thresholds for teenage pregnancy and advanced maternal age, both of which are consistently linked to distinct risks of hypertension, preterm birth, significant maternal and neonatal health risks in the literature. Additionally, it enables clearer identification of at-risk populations for targeted interventions. We will set the reference category as middle age to facilitate interpretation of the results.
 
-**Birth Order:** The birth order variable was categorized into primiparity (first pregnancy), low parity (2-3 pregnancies), and high parity (4 or more pregnancies) to capture the differential risks associated with pregnancy outcomes. Literature indicates that primiparity is linked to higher risks of preterm birth due to uterine immaturity, while high parity is associated with risks like uterine overdistension and scarring, which can impact neonatal outcomes. This categorization ensures alignment with known clinical thresholds for understanding parity-related risks.
+**Birth Order:** The birth order variable was categorized into primiparous ( birth order = 1), and multiparous (birth order >= 2) to align with established clinical thresholds that reflect higher risks of preterm birth and low birth weight in first births and progressively increasing birth weight with higher parity, as supported by literature. This categorization aids in capturing clinically meaningful parity-related risks and ensures meaningful interpretation of the results. To facilitate interpretation, we will set multiparous (birth order >= 2) as the reference category in the analysis.
 
 ### Code:
 
@@ -258,14 +266,21 @@ Based on the reviewed literature, maternal age is commonly categorized as young,
 # Categorise age into young, middle, and old
 birthweight_analysis$age <- cut(birthweight_analysis$age, breaks = c(0, 20, 34, 100), 
        labels = c("young", "middle", "old"), right = FALSE)
-# Categorise birth order into primiparity, low parity, and high parity
-birthweight_analysis$birth <- cut(birthweight_analysis$birth, breaks = c(0, 2, 4, 100), 
-       labels = c("primiparity", "low parity", "high parity"), right = FALSE)
+
+# set reference as middle age because of the U shaped relationship between age and low birth weight
+birthweight_analysis$age <- relevel(birthweight_analysis$age, ref = "middle")
+
+# Categorise birth order into primiparous, and multiparous
+birthweight_analysis$birth <- cut(birthweight_analysis$birth, breaks = c(0, 2, 100), 
+       labels = c("primiparous", "multiparous"), right = FALSE)
+
+# Set reference as multiparous to estimate the effect of first births on low birth weight
+birthweight_analysis$birth <- relevel(birthweight_analysis$birth, ref = "multiparous")
 ```
 
 ## Covariate Selection:
 
-Covariate selection after constructing the DAG is essential to identify confounders that need adjustment to block backdoor paths, ensuring a valid estimate of the causal effect. It prevents overadjustment by avoiding control for mediators or downstream variables and avoids collider bias by not conditioning on colliders. This step ensures that the model focuses on the total causal effect without introducing unnecessary bias or complexity.
+Covariate selection after constructing the DAG is essential to identify confounders that need adjustment to block backdoor paths, ensuring a valid estimate of the causal effect. It prevents over adjustment by avoiding control for mediators or downstream variables and avoids collider bias by not conditioning on colliders. This step ensures that the model focuses on the total causal effect without introducing unnecessary bias or complexity.
 
 **1. Smoking (smoke):** Smoking during pregnancy is the primary exposure variable in this study and directly affects low birth weight (low) as per the DAG (smoke → low). Smoking also influences preterm birth (smoke → preterm) and high blood pressure (smoke → high_bp), indirectly contributing to low birth weight.
 
@@ -326,11 +341,9 @@ This ensures proper estimation of the total causal effect of smoking on low birt
 
 ### Logistic Regression Model:
 
-Let us test the logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children, adjusting for maternal age and high systolic blood pressure before pregnancy. This statistical approach enables a robust assessment of the relationship between smoking and low birth weight, accounting for confounding factors and causal pathways.
+Let us test the logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children, adjusting for all the confounders : maternal age, birth order of the child and high systolic blood pressure before pregnancy. This statistical approach enables a robust assessment of the relationship between smoking and low birth weight, accounting for confounding factors and causal pathways.
 
-First, we will look at the logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children, adjusting for all the confounders: maternal age, high systolic blood pressure before pregnancy, and birth order.
-
-Higher order interactions are not considered in the model due to the increased complexity, potential overfitting and difficulty to interpret the casual effect of smoking on low birth weight. The model is kept simple to focus on the main effects and ensure a clear interpretation of the results.
+Higher order interactions are not considered in the model due to the increased complexity, potential overfitting and difficulty to interpret the causal effect of smoking on low birth weight. The model is kept simple to focus on the main effects and ensure a clear interpretation of the results.
 
 Logistic regression model formula: $low \sim smoke + age + high\_bp + birth$
 
@@ -340,121 +353,73 @@ model <- glm(low ~ smoke + age + high_bp + birth, data = birthweight_analysis,
              family = binomial)
 
 summary(model)
-
-# Calculate odds ratios and 95% confidence intervals
-exp(cbind(Odds_Ratio = coef(model), confint(model)))
 ```
 
-#### Interpretation of Odds Ratios and 95% Confidence Intervals:
+The logistic regression model provides estimates of the coefficients for smoking, maternal age, high systolic blood pressure, and birth order, along with their corresponding standard errors, z-values, and p-values.
 
--   The **odds ratio for smoking during pregnancy is 2.35**, indicating that the odds of low birth weight are 2.35 times higher for children born to mothers who smoke during pregnancy compared to non-smokers, adjusting for maternal age, birth order and high systolic blood pressure before pregnancy. The 95% confidence interval for the odds ratio is (1.58, 3.51), suggesting a statistically significant association between smoking and low birth weight. This is supported by the p-value of 0.00002 (\< 0.05), indicating a significant effect of smoking on low birth weight at a 5% level of significance.
+## Results:
 
--   The **odds ratio for middle-aged mothers (20-34 years) is 1.4**, suggesting that the odds of low birth weight are 1.4 times lower for middle-aged mothers compared to young mothers ($<$ 20 years), adjusting for smoking, birth order and high systolic blood pressure before pregnancy. The 95% confidence interval for the odds ratio is (0.72, 2.82) includes 1, indicating that the effect of age on low birth weight is not statistically significant in this model. This is also suggested by the p-value of 0.324 ( \> 0.05) which indicates that the effect of age is not statistically significant at 5 % level of significance.
+The logistic regression model provides the following results:
 
--   The **odds ratio for old-aged mothers ($>=$ 35 years) is 1.8**, suggesting that the odds of low birth weight are 1.8 times higher for old-aged mothers compared to young mothers ($<$ 20 years), adjusting for smoking, birth order and high systolic blood pressure before pregnancy. The 95% confidence interval for the odds ratio is (0.73, 4.54) includes 1, indicating that the effect of age on low birth weight is not statistically significant in this model. This is also suggested by the p-value of 0.203 ( \> 0.05) which indicates that the effect of age is not statistically significant at 5 % level of significance.
+-   **Smoking (smoke):** The coefficient for smoking during pregnancy is **positive and statistically significant** (p < 0.05), indicating that smoking increases the risk of low birth weight in children. 
 
--   The **odds ratio for high systolic blood pressure before pregnancy is 0.765**, suggesting that the odds of low birth weight are 0.765 times lower for mothers with high blood pressure compared to mothers without high blood pressure, adjusting for smoking, birth order and maternal age. The 95% confidence interval for the odds ratio is (0.47, 1.21) includes 1, indicating that the effect of high blood pressure on low birth weight is not statistically significant in this model. This is also suggested by the p-value of 0.264 ( \> 0.05) which indicates that the effect of high blood pressure is not statistically significant at 5 % level of significance.
+-  **Maternal Age (age):** The coefficient for maternal age is **negative** for young mothers (age $<$ 20 years) compared to middle-aged mothers (age = 20-34 years), suggesting a lower risk of low birth weight in younger mothers. However, the effect is **not statistically significant** (p > 0.05). The coefficient for older mothers (age $>=$ 35 years) is **positive**, indicating a higher risk of low birth weight compared to middle-aged mothers, but it is **not statistically significant** (p > 0.05).
 
--   The **odds ratio for low parity birth is 1.06**, suggesting that the odds of low birth weight are 1.06 times higher for children with birth order of second or third compared to first-order births, adjusting for smoking, maternal age and high systolic blood pressure before pregnancy. The 95% confidence interval for the odds ratio is (0.67, 1.66) includes 1, indicating that the effect of birth order on low birth weight is not statistically significant in this model. This is also suggested by the p-value of 0.812 ( \> 0.05) which indicates that the effect of birth order is not statistically significant at 5 % level of significance.
+-  **High Blood Pressure (high_bp):** The coefficient for high systolic blood pressure before pregnancy is **negative** indicating that high systolic blood pressure before pregnancy ($>=$ 135 mmHg)  is associated with a lower risk of low birth weight. However, the effect is **not statistically significant** (p > 0.05).
 
--   The **odds ratio for high parity birth is 1.05**, suggesting that the odds of low birth weight are 1.05 times higher for children with birth order of four or more compared to first-order births, adjusting for smoking, maternal age and high systolic blood pressure before pregnancy. The 95% confidence interval for the odds ratio is (0.27, 3.66) includes 1, indicating that the effect of birth order on low birth weight is not statistically significant in this model. This is also suggested by the p-value of 0.941 ( \> 0.05) which indicates that the effect of birth order is not statistically significant at 5 % level of significance.
+- **Birth Order (birth):** The coefficient for birth order is **negative** for first born children (birth = primiparous) compared to children with higher birth orders (birth $>=$ 2), suggesting a higher risk of low birth weight in higher order births. However, the effect is **not statistically significant** (p > 0.05).
 
-Although, the odds ratio results for low parity and high parity are in contradiction with the literature, which suggests that first-order births are associated with a higher incidence of low birth weight compared to higher-order births. This discrepancy may be due to the small sample size or other unmeasured confounders that were not accounted for in the model. 
+- **Intercept:** The intercept term represents the log-odds of low birth weight in the reference category (middle-aged mothers, multiparous births, non-smokers, and normal systolic blood pressure). The intercept is **negative**, indicating a lower risk of low birth weight in the reference category. The effect is **statistically significant** (p < 0.05), indicating that the reference category has a significantly lower risk of low birth weight.
 
-------------------------------------------------------------------------
+## Goodness of Fit:
 
-Now, let us check the logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children, adjusting for maternal age and high systolic blood pressure before pregnancy.
+Let us test whether the logistic regression model is a good fit for the data using the **Hosmer-Lemeshow test**. 
 
-Logistic regression model formula: $low \sim smoke + age + high\_bp$
+The Hosmer-Lemeshow test assesses the goodness of fit of the model by comparing the observed and expected frequencies of the outcome variable in different groups. A non-significant p-value ( > 0.05) indicates that the model fits the data well.
 
 ```{r}
-# Build the logistic regression model
-model1 <- glm(low ~ smoke + age + high_bp, data = birthweight_analysis, 
-             family = binomial)
-summary(model1)
+# Perform the Hosmer-Lemeshow test
+hoslem.test <- function(model) {
+  observed <- birthweight_analysis$low
+  expected <- predict(model, type = "response")
+  chisq <- sum((observed - expected)^2 / expected)
+  df <- df.residual(model)
+  p_value <- pchisq(chisq, df, lower.tail = FALSE)
+  return(p_value)
+}
 
-# Calculate odds ratios and 95% confidence intervals
-exp(cbind(Odds_Ratio = coef(model1), confint(model1)))
+# Calculate the p-value for the Hosmer-Lemeshow test
+p_value <- hoslem.test(model)
+p_value
 ```
 
-#### Interpretation of Odds Ratios and 95% Confidence Intervals:
+The p-value of **0.9999998** in the Hosmer-Lemeshow Test suggests that the logistic regression model has an excellent fit to the data. A p-value close to 1 (such as 0.9999998) indicates that the predicted probabilities align almost perfectly with the observed outcomes. This indicates that the model adequately captures the relationship between smoking during pregnancy and low birth weight in children, accounting for the selected covariates.
 
--   The **odds ratio for smoking during pregnancy is 2.36**, indicating that the odds of low birth weight are 2.36 times higher for children born to mothers who smoke during pregnancy compared to non-smokers, adjusting for maternal age and high systolic blood pressure before pregnancy. The 95% confidence interval for the odds ratio is (1.59, 3.51), suggesting a statistically significant association between smoking and low birth weight. This is supported by the p-value of 0.00002 (\< 0.05), indicating a significant effect of smoking on low birth weight at a 5% level of significance.
+This suggests that we can confidently interpret the results of the above logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children. Let us calculate the odds ratio for smoking during pregnancy to quantify the effect size.
 
--   The **odds ratio for middle-aged mothers (20-34 years) is 1.44**, suggesting that the odds of low birth weight are 1.44 times lower for middle-aged mothers compared to young mothers ($<$ 20 years), adjusting for smoking and high systolic blood pressure before pregnancy. The 95% confidence interval for the odds ratio is (0.78, 2.8) includes 1, indicating that the effect of age on low birth weight is not statistically significant in this model. This is also suggested by the p-value of 0.261 ( \> 0.05) which indicates that the effect of age is not statistically significant at 5 % level of significance.
+### Odds Ratio:
 
--   The **odds ratio for old-aged mothers ($>=$ 35 years) is 1.89**, suggesting that the odds of low birth weight are 1.89 times higher for old-aged mothers compared to young mothers ($<$ 20 years), adjusting for smoking and high systolic blood pressure before pregnancy. The 95% confidence interval for the odds ratio is (0.85, 4.32) includes 1, indicating that the effect of age on low birth weight is not statistically significant in this model. This is also suggested by the p-value of 0.124 ( \> 0.05) which indicates that the effect of age is not statistically significant at 5 % level of significance.
-
--   The **odds ratio for high systolic blood pressure before pregnancy is 0.765**, suggesting that the odds of low birth weight are 0.765 times lower for mothers with high blood pressure compared to mothers without high blood pressure, adjusting for smoking and maternal age. The 95% confidence interval for the odds ratio is (0.47, 1.21) includes 1, indicating that the effect of high blood pressure on low birth weight is not statistically significant in this model. This is also suggested by the p-value of 0.262 ( \> 0.05) which indicates that the effect of high blood pressure is not statistically significant at 5 % level of significance.
-
-------------------------------------------------------------------------
-
-Now, let us check the logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children, adjusting for maternal age.
-
-Logistic regression model formula: $low \sim smoke + age$
+The odds ratio for smoking during pregnancy provides a measure of the association between smoking and the risk of low birth weight in children. It quantifies the increase in the odds of low birth weight for children born to mothers who smoked during pregnancy compared to non-smokers, after adjusting for maternal age, high systolic blood pressure, and birth order.
 
 ```{r}
-# Build the logistic regression model
-model2 <- glm(low ~ smoke + age, data = birthweight_analysis, family = binomial)
-summary(model2)
+# Calculate the odds ratio for smoking during pregnancy
+odds_ratio <- exp(coef(model)["smoke"])
+odds_ratio
 
-# Calculate odds ratios and 95% confidence intervals
-exp(cbind(Odds_Ratio = coef(model2), confint(model2)))
+# 95% Confidence Interval
+conf_int <- exp(confint(model)["smoke", ])
+conf_int
+
 ```
 
-#### Interpretation of Odds Ratios and 95% Confidence Intervals:
+The **odds ratio (OR) of 2.354** for smoking during pregnancy indicates that mothers who smoked are approximately 2.35 times more likely to have a child with low birth weight compared to non-smoking mothers. The 95% confidence interval (CI), ranging from **1.58 to 3.51**, shows that the true OR is likely between these values. Since the CI does not include 1, the association is statistically significant, supporting a meaningful link between smoking and low birth weight. 
 
--   The **odds ratio for smoking during pregnancy is 2.31**, indicating that the odds of low birth weight are 2.31 times higher for children born to mothers who smoke during pregnancy compared to non-smokers, adjusting for maternal age. The 95% confidence interval for the odds ratio is (1.55, 3.43), suggesting a statistically significant association between smoking and low birth weight. This is supported by the p-value of 0.00003 (\< 0.05), indicating a significant effect of smoking on low birth weight at a 5% level of significance.
-
--   The **odds ratio for middle-aged mothers (20-34 years) is 1.44**, suggesting that the odds of low birth weight are 1.44 times lower for middle-aged mothers compared to young mothers ($<$ 20 years), adjusting for smoking. The 95% confidence interval for the odds ratio is (0.78, 2.8) includes 1, indicating that the effect of age on low birth weight is not statistically significant in this model. This is also suggested by the p-value of 0.258 ( \> 0.05) which indicates that the effect of age is not statistically significant at 5 % level of significance.
-
--   The **odds ratio for old-aged mothers ($>=$ 35 years) is 1.98**, suggesting that the odds of low birth weight are 1.98 times higher for old-aged mothers compared to young mothers ($<$ 20 years), adjusting for smoking. The 95% confidence interval for the odds ratio is (0.89, 4.5) includes 1, indicating that the effect of age on low birth weight is not statistically significant in this model. This is also suggested by the p-value of 0.097 ( \> 0.05) which indicates that the effect of age is not statistically significant at 5 % level of significance.
-
-------------------------------------------------------------------------
-
-Now, let us check the logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children, adjusting for high systolic blood pressure before pregnancy.
-
-Logistic regression model formula: $low \sim smoke + high\_bp$
-
-```{r}
-# Build the logistic regression model
-model3 <- glm(low ~ smoke + high_bp, data = birthweight_analysis, family = binomial)
-summary(model3)
-
-# Calculate odds ratios and 95% confidence intervals
-exp(cbind(Odds_Ratio = coef(model3), confint(model3)))
-```
-
-#### Interpretation of Odds Ratios and 95% Confidence Intervals:
-
--   The **odds ratio for smoking during pregnancy is 2.34**, indicating that the odds of low birth weight are 2.34 times higher for children born to mothers who smoke during pregnancy compared to non-smokers, adjusting for high systolic blood pressure before pregnancy. The 95% confidence interval for the odds ratio is (1.58, 3.48), suggesting a statistically significant association between smoking and low birth weight. This is supported by the p-value of 0.00002 (\< 0.05), indicating a significant effect of smoking on low birth weight at a 5% level of significance.
-
--   The **odds ratio for high systolic blood pressure before pregnancy is 0.739**, suggesting that the odds of low birth weight are 0.739 times lower for mothers with high blood pressure compared to mothers without high blood pressure, adjusting for smoking. The 95% confidence interval for the odds ratio is (0.46, 1.17) includes 1, indicating that the effect of high blood pressure on low birth weight is not statistically significant in this model. This is also suggested by the p-value of 0.203 ( \> 0.05) which indicates that the effect of high blood pressure is not statistically significant at 5 % level of significance.
-
-------------------------------------------------------------------------
-
-Finally, let us check the logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children without adjusting for any covariates.
-
-Logistic regression model formula: $low \sim smoke$
-
-```{r}
-# Build the logistic regression model
-model4 <- glm(low ~ smoke, data = birthweight_analysis, family = binomial)
-summary(model4)
-
-# Calculate odds ratios and 95% confidence intervals
-exp(cbind(Odds_Ratio = coef(model4), confint(model4)))
-```
-
-#### Interpretation of Odds Ratios and 95% Confidence Intervals:
-
--   The **odds ratio for smoking during pregnancy is 2.28**, indicating that the odds of low birth weight are 2.28 times higher for children born to mothers who smoke during pregnancy compared to non-smokers. The 95% confidence interval for the odds ratio is (1.54, 3.39), suggesting a statistically significant association between smoking and low birth weight. This is supported by the p-value of 0.00003 (\< 0.05), indicating a significant effect of smoking on low birth weight at a 5% level of significance.
 
 ## Conclusion:
 
 The logistic regression analysis was conducted to address the research question: *Does smoking during pregnancy have a causal effect on the risk of the child being born with low birth weight (below 2500 grams)?*
 
-The results from all the above models consistently show that smoking during pregnancy significantly increases the risk of low birth weight in children. After adjusting for confounders like maternal age, birth order of the child and pre-pregnancy systolic blood pressure, the **odds of low birth weight were found to be approximately 2.3 as high for children born to mothers who smoked during pregnancy**. These findings underscore the importance of smoking cessation interventions during pregnancy to reduce the risk of adverse birth outcomes.
+The results from all the above models consistently show that smoking during pregnancy significantly increases the risk of low birth weight in children. After adjusting for confounders like maternal age, birth order of the child and pre-pregnancy systolic blood pressure, the **odds of low birth weight were found to be approximately 2.35 as high for children born to mothers who smoked during pregnancy**. These findings underscore the importance of smoking cessation interventions during pregnancy to reduce the risk of adverse birth outcomes.
 
 The inclusion of covariates in the model helps to estimate the total causal effect of smoking on low birth weight while accounting for potential confounding factors. The results provide valuable insights for public health initiatives aimed at improving maternal and child health outcomes.
 
