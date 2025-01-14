@@ -330,6 +330,8 @@ Let us test the logistic regression model to estimate the total causal effect of
 
 First, we will look at the logistic regression model to estimate the total causal effect of smoking during pregnancy on the risk of low birth weight in children, adjusting for all the confounders: maternal age, high systolic blood pressure before pregnancy, and birth order.
 
+Higher order interactions are not considered in the model due to the increased complexity, potential overfitting and difficulty to interpret the casual effect of smoking on low birth weight. The model is kept simple to focus on the main effects and ensure a clear interpretation of the results.
+
 Logistic regression model formula: $low \sim smoke + age + high\_bp + birth$
 
 ```{r}
